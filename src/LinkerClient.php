@@ -76,6 +76,7 @@ class LinkerClient
         }
 
         return $this->call('Process', [
+            'Id' => $data['id'],
             'Html' => $data['html'],
             'Collection' => $data['collection'],
             'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
