@@ -126,26 +126,33 @@ class LinkerClient
      * @throws ApiException If the API call fails.
      */
     protected function call($method, array $data = [])
-    {
-        $url = "{$this->apiUrl}/{$method}";
-        $response = Http::withHeaders(['ApiKey' => $this->apiKey])->post($url, $data);
+{
+    $url = "{$this->apiUrl}/{$method}";
     
-        if ($response->successful()) {
-            return $response->json();
-        }
-    
-        // Check if the response is JSON and attempt to parse it
-        $isJsonResponse = str_contains($response->header('Content-Type'), 'application/json');
-        $errorDetails = $isJsonResponse ? $response->json()['error'] ?? 'Unknown error' : $response->body();
-    
-        if ($response->clientError()) {
-            throw new ApiException("Client error ({$response->status()}): $errorDetails");
-        }
-    
-        if ($response->serverError()) {
-            throw new ApiException("Server error ({$response->status()}): $errorDetails");
-        }
-    
-        throw new ApiException("Failed to call {$method} method. Error: $errorDetails");
+    // Convert data array to JSON
+    $jsonData = json_encode($data);
+
+    $response = Http::withHeaders([
+        'ApiKey' => $this->apiKey,
+        'Content-Type' => 'application/json; charset=UTF-8', // Set the Content-Type header
+    ])->post($url, $jsonData); // Send JSON data in the request body
+
+    if ($response->successful()) {
+        return $response->json();
     }
+
+    // Check if the response is JSON and attempt to parse it
+    $isJsonResponse = str_contains($response->header('Content-Type'), 'application/json');
+    $errorDetails = $isJsonResponse ? $response->json()['error'] ?? 'Unknown error' : $response->body();
+
+    if ($response->clientError()) {
+        throw new ApiException("Client error ({$response->status()}): $errorDetails");
+    }
+
+    if ($response->serverError()) {
+        throw new ApiException("Server error ({$response->status()}): $errorDetails");
+    }
+
+    throw new ApiException("Failed to call {$method} method. Error: $errorDetails");
+}
 }
