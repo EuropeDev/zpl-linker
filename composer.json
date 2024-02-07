@@ -1,0 +1,16 @@
+{
+    "name": "europedev/zpl-linker",
+    "description": "Služba Linkeru umožňuje vytvořit odkazy na předpisy do vašeho HTML kódu. Pošlete kus svého html kódu a vrátí se vám prolinkovaný.",
+    "autoload": {
+        "psr-4": {
+            "Europedev\\ZplLinker\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "europedev",
+            "email": "echo@europedev.com"
+        }
+    ],
+    "require": {}
+}
