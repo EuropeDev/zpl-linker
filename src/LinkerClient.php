@@ -52,6 +52,7 @@ class LinkerClient
     public function simple(string $html, int $id = null, string $collection = null, DateTime $effectiveDate = null, bool $removeExisting = true, string $attributes = null)
     {
         $data = [
+            'id' => $id,
             'html' => $html,
             'collection' => $collection,
             'effectiveDate' => $effectiveDate,
@@ -60,6 +61,7 @@ class LinkerClient
         ];
 
         $rules = [
+            'id' => 'nullable|integer',
             'html' => 'required|string',
             'collection' => ['nullable', 'string', Rule::in(['cs', 'ms'])],
             'effectiveDate' => 'nullable|date',
@@ -73,7 +75,7 @@ class LinkerClient
             throw new ValidationException($validator);
         }
 
-        return $this->call('Add', [
+        return $this->call('Process', [
             'Html' => $data['html'],
             'Collection' => $data['collection'],
             'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
@@ -106,7 +108,7 @@ class LinkerClient
             throw new ValidationException($validator);
         }
 
-        return $this->call('Process', [
+        return $this->call('Add', [
             'Html' => $data['html'],
             'Collection' => $data['collection'],
             'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
