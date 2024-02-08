@@ -109,16 +109,16 @@ class LinkerClient
         }
 
         return $this->call('Process','json', [
-            'Id' => $data['id'],
+            'id' => $data['id'],
             'SourceHtml' => $data['html'],
-            'Collection' => $data['collection'],
-            'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
+            'Collections' => $data['collection'] ? array($data['collection']) : null,
+            'EffectDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
             'RemoveExisting' => $data['removeExisting'],
-            'Attributes' => $data['attributes'],
+            'Attributes' => $data['attributes'] ?? null,
         ]);
     }
 
-    public function complex(string $html, string $collection = null, DateTime $effectiveDate = null, bool $removeExisting = true, string $attributes = null)
+   /* public function complex(string $html, string $collection = null, DateTime $effectiveDate = null, bool $removeExisting = true, string $attributes = null)
     {
         $data = [
             'html' => $html,
@@ -149,7 +149,7 @@ class LinkerClient
             'RemoveExisting' => $data['removeExisting'],
             'Attributes' => $data['attributes'],
         ]);
-    }
+    }*/
     /**
      * Performs an API call.
      *
