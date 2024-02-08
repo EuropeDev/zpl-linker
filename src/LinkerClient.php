@@ -20,9 +20,9 @@ class LinkerClient
     public function __construct($apiKey = null, $apiUrl = null)
     {
         $this->apiKey = $apiKey ?: env('ZPL_API_KEY');
-        $this->apiUrl = $apiUrl ?: env('ZPL_API_URL', 'https://linker.zakonyprolidi.cz/api/json');
-    }
-
+        $this->apiUrl = $apiUrl ?: env('ZPL_API_URL', 'https://linker.zakonyprolidi.cz/api');
+    } 
+ 
     /**
      * Sends a hello message to the API.
      *
@@ -32,8 +32,41 @@ class LinkerClient
      */
     public function hello($message)
     {
-        $res = $this->call('Hello', ['Message' => $message]);
+        $res = $this->call('Hello','json', ['Message' => $message]);
         return $res['Message'] ?? null;
+    }
+
+    public function form(string $html, string $collection = null, DateTime $effectiveDate = null, bool $removeExisting = true, string $attributes = null)
+    {
+        $data = [
+            'html' => $html,
+            'collection' => $collection,
+            'effectiveDate' => $effectiveDate,
+            'removeExisting' => $removeExisting,
+            'attributes' => $attributes,
+        ];
+
+        $rules = [
+            'html' => 'required|string',
+            'collection' => ['nullable', 'string', Rule::in(['cs', 'ms'])],
+            'effectiveDate' => 'nullable|date',
+            'removeExisting' => 'required|boolean', 
+            'attributes' => 'nullable|string',
+        ];
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $this->call('process','form', [
+            'SourceHtml' => $data['html'],
+            'Collection' => $data['collection'],
+            'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
+            'RemoveExisting' => $data['removeExisting'],
+            'Attributes' => $data['attributes'],
+        ]);
     }
 
     /**
@@ -75,9 +108,9 @@ class LinkerClient
             throw new ValidationException($validator);
         }
 
-        return $this->call('Process', [
+        return $this->call('Process','json', [
             'Id' => $data['id'],
-            'Html' => $data['html'],
+            'SourceHtml' => $data['html'],
             'Collection' => $data['collection'],
             'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
             'RemoveExisting' => $data['removeExisting'],
@@ -109,7 +142,7 @@ class LinkerClient
             throw new ValidationException($validator);
         }
 
-        return $this->call('Add', [
+        return $this->call('add','json', [
             'Html' => $data['html'],
             'Collection' => $data['collection'],
             'EffectiveDate' => $effectiveDate ? $effectiveDate->format('Y-m-d') : null,
@@ -122,37 +155,51 @@ class LinkerClient
      *
      * @param string $method The API method to call.
      * @param array $data The data to send in the request.
+     * @param string $type The request type (json or form).
      * @return array The API response.
      * @throws ApiException If the API call fails.
      */
-    protected function call($method, array $data = [])
-{
-    $url = "{$this->apiUrl}/{$method}";
-    
-    // Convert data array to JSON
-    $jsonData = json_encode($data);
+    protected function call($method, $type = 'json', array $data = [])
+    {
+        $url = "{$this->apiUrl}/{$type}/{$method}";
 
-    $response = Http::withHeaders([
-        'ApiKey' => $this->apiKey,
-        'Content-Type' => 'application/json; charset=UTF-8', // Set the Content-Type header
-    ])->post($url, $jsonData); // Send JSON data in the request body
+        if ($type === 'json') {
+            $response = Http::withHeaders([
+                'ApiKey' => $this->apiKey,
+                'Content-Type' => 'application/json; charset=UTF-8',
+            ])->post($url, $data);
+        } elseif ($type === 'form') {
+            $response = Http::asForm()->withHeaders([
+                'ApiKey' => $this->apiKey,
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ])->post($url, $data);
+        } else {
+            throw new ApiException("Invalid request type: {$type}");
+        }
 
-    if ($response->successful()) {
-        return $response->json();
+        if ($response->successful()) {
+            if($type === 'json'){
+                return $response->json();
+            } else {
+                return $response->body();
+            }        } else {
+            print_r(array(
+                'Status' => $response->status(),
+                'Body' => $response->body(),
+                'Headers' => $response->headers(),  
+            ));
+        }
+
+        $errorDetails = $response->json()['error'] ?? $response->body();
+
+        if ($response->clientError()) {
+            throw new ApiException("Client error ({$response->status()}): $errorDetails");
+        }
+
+        if ($response->serverError()) {
+            throw new ApiException("Server error ({$response->status()}): $errorDetails");
+        }
+
+        throw new ApiException("Failed to call {$method} method. Error: $errorDetails");
     }
-
-    // Check if the response is JSON and attempt to parse it
-    $isJsonResponse = str_contains($response->header('Content-Type'), 'application/json');
-    $errorDetails = $isJsonResponse ? $response->json()['error'] ?? 'Unknown error' : $response->body();
-
-    if ($response->clientError()) {
-        throw new ApiException("Client error ({$response->status()}): $errorDetails");
-    }
-
-    if ($response->serverError()) {
-        throw new ApiException("Server error ({$response->status()}): $errorDetails");
-    }
-
-    throw new ApiException("Failed to call {$method} method. Error: $errorDetails");
-}
 }
